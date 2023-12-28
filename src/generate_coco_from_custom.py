@@ -218,10 +218,21 @@ if __name__ == '__main__':
         f'{args.split_name}_train_coco',
         frame_range=frame_range,
         seqs_names=train_seqs,
-        data_root=data_root)
+        data_root=data_root,
+        root_split='seqs')
     # VAL SET
     generate_coco_from_mot(
         f'{args.split_name}_val_coco',
         frame_range=frame_range,
         seqs_names=test_seqs,
-        data_root=data_root)
+        data_root=data_root,
+        root_split='seqs')
+    
+    # ALL SET
+    generate_coco_from_mot(
+        f'{args.split_name}_all_coco',
+        frame_range=frame_range,
+        seqs_names=test_seqs.extend(train_seqs),
+        data_root=data_root,
+        root_split='seqs')
+    
