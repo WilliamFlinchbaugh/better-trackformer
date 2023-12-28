@@ -57,10 +57,11 @@ class FrozenBatchNorm2d(torch.nn.Module):
 class BackboneBase(nn.Module):
 
     def __init__(self, backbone: nn.Module, train_backbone: bool,
-                 return_interm_layers: bool):
+                 return_interm_layers: bool,
+                 use_fpn=True, use_panet=True):
         super().__init__()
-        self.use_fpn = True
-        self.use_panet = True
+        self.use_fpn = use_fpn
+        self.use_panet = use_panet
         
         for name, parameter in backbone.named_parameters():
             if (not train_backbone
@@ -123,13 +124,16 @@ class Backbone(BackboneBase):
     def __init__(self, name: str,
                  train_backbone: bool,
                  return_interm_layers: bool,
-                 dilation: bool):
+                 dilation: bool,
+                 use_fpn=True,
+                 use_panet=True):
         norm_layer = FrozenBatchNorm2d
         backbone = getattr(torchvision.models, name)(
             replace_stride_with_dilation=[False, False, dilation],
             pretrained=is_main_process(), norm_layer=norm_layer)
         super().__init__(backbone, train_backbone,
-                         return_interm_layers)
+                         return_interm_layers, 
+                         use_fpn=use_fpn, use_panet=use_panet)
         if dilation:
             self.strides[-1] = self.strides[-1] // 2
 
@@ -159,6 +163,8 @@ def build_backbone(args):
     backbone = Backbone(args.backbone,
                         train_backbone,
                         return_interm_layers,
-                        args.dilation)
+                        args.dilation,
+                        use_fpn=args.use_fpn,
+                        use_panet=args.use_panet)
     model = Joiner(backbone, position_embedding)
     return model

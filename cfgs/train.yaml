@@ -22,6 +22,12 @@ load_mask_head_from_model: null
 # Backbone
 # Name of the convolutional backbone to use. ('resnet50', 'resnet101')
 backbone: resnet50
+# If use_fpn, we utilize an fpn neck
+# If use_panet on top of use_fpn, we use a panet neck
+use_fpn: true
+use_panet: true
+# If true, include the "camera state" for camera movement improvement
+use_cam_state: true
 # If true, we replace stride with dilation in the last convolutional block (DC5)
 dilation: false
 # Type of positional embedding to use on top of the image features. ('sine', 'learned')
