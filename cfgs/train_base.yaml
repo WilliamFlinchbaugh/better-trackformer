@@ -1,0 +1,13 @@
+dataset: mot
+
+train_split: base_0_train
+val_split: base_0_test
+
+mot_path_train: data/base
+mot_path_val: data/base
+
+epochs: 20
+lr_drop: 10
+
+tracking_eval: false
+resume: ''
