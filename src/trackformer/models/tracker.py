@@ -267,6 +267,7 @@ class Tracker:
         """This function should be called every timestep to perform tracking with a blob
         containing the image information.
         """
+        
         self.inactive_tracks = [
             t for t in self.inactive_tracks
             if t.has_positive_area() and t.count_inactive <= self.inactive_patience
@@ -335,9 +336,7 @@ class Tracker:
             if self.generate_attention_maps:
                 track_attention_maps = self.attention_data['maps'][:-self.num_object_queries]
 
-            track_keep = torch.logical_and(
-                track_scores > self.track_obj_score_thresh,
-                result['labels'][:-self.num_object_queries] == 0)
+            track_keep = track_scores > self.track_obj_score_thresh
 
             tracks_to_inactive = []
             tracks_from_inactive = []
@@ -358,9 +357,7 @@ class Tracker:
                     if track.count_termination >= self.steps_termination:
                         tracks_to_inactive.append(track)
 
-            track_keep = torch.logical_and(
-                track_scores > self.reid_score_thresh,
-                result['labels'][:-self.num_object_queries] == 0)
+            track_keep = track_scores > self.reid_score_thresh
 
             # reid queries
             for i, track in enumerate(self.inactive_tracks, start=len(self.tracks)):
@@ -421,9 +418,8 @@ class Tracker:
         if self.generate_attention_maps:
             new_det_attention_maps = self.attention_data['maps'][-self.num_object_queries:]
 
-        new_det_keep = torch.logical_and(
-            new_det_scores > self.detection_obj_score_thresh,
-            result['labels'][-self.num_object_queries:] == 0)
+        new_det_keep = new_det_scores > self.detection_obj_score_thresh
+            	    
 
         new_det_boxes = new_det_boxes[new_det_keep]
         new_det_scores = new_det_scores[new_det_keep]
