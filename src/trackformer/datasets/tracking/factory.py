@@ -5,13 +5,15 @@ Factory of tracking datasets.
 from typing import Union
 
 from torch.utils.data import ConcatDataset
+import os
 
 from .demo_sequence import DemoSequence
-from .mot_wrapper import MOT17Wrapper, MOT20Wrapper, MOTS20Wrapper
+from .mot_wrapper import MOT17Wrapper, MOT20Wrapper, MOTS20Wrapper, BASEWrapper, DistanceWrapper, MovementWrapper, LightingWrapper
 
 DATASETS = {}
 
 # Fill all available datasets, change here to modify / add new datasets.
+        
 for split in ['TRAIN', 'TEST', 'ALL', '01', '02', '03', '04', '05',
               '06', '07', '08', '09', '10', '11', '12', '13', '14']:
     for dets in ['DPM', 'FRCNN', 'SDP', 'ALL']:
@@ -36,6 +38,32 @@ for split in ['TRAIN', 'TEST', 'ALL', '01', '02', '05', '06', '07', '09', '11', 
 
 DATASETS['DEMO'] = (lambda kwargs: [DemoSequence(**kwargs), ])
 
+# Custom Datasets
+
+for i in range(4):
+    for split in ['TRAIN', 'TEST', 'ALL']:
+        name = f'BASE-{split}-{i}'
+        DATASETS[name] = (lambda kwargs, split=split, name=name: BASEWrapper(split, name, 'base', **kwargs))
+        
+for split in ['pendleton_1', 'pendleton_2', 'pendleton_3', 'pendleton_4', 'pendleton_5', 'pendleton_6', 'pendleton_7', 'pendleton_8', 'pendleton_9', 'pendleton_10', 'yemen_1', 'yemen_2']:
+    DATASETS[split] = (lambda kwargs, split=split, name=split: BASEWrapper(split, name, 'base', **kwargs))
+
+for distance in ['25m', '50m', '100m', '150m', '200m', '300m', '400m', '500m', '750m', '1000m']:
+    DATASETS[distance] = (lambda kwargs, split=distance: DistanceWrapper(split, **kwargs))
+    
+for seq in ['pendleton_1', 'pendleton_2', 'pendleton_3', 'pendleton_4', 'pendleton_5', 'pendleton_6', 'pendleton_7', 'pendleton_10', 'yemen_1', 'yemen_2']:
+    for distance in ['25m', '50m', '100m', '150m', '200m', '300m', '400m', '500m', '750m', '1000m']:
+        DATASETS[f'{seq}_{distance}'] = (lambda kwargs, split=f'{distance}/{seq}_{distance}': DistanceWrapper(split, **kwargs))
+    
+for speed in ['0ms', '5ms', '10ms', '20ms', '40ms']:
+    DATASETS[speed] = (lambda kwargs, split=speed: MovementWrapper(split, **kwargs))
+    
+for seq in ['pendleton_1', 'pendleton_2', 'pendleton_3', 'pendleton_4', 'pendleton_5', 'pendleton_6', 'pendleton_7', 'pendleton_10', 'yemen_1', 'yemen_2']:
+    for speed in ['0ms', '5ms', '10ms', '20ms', '40ms']:
+        DATASETS[f'{seq}_{speed}'] = (lambda kwargs, split=f'{speed}/{seq}_{speed}': MovementWrapper(split, **kwargs))
+    
+for time in ['1s', '2s', '5s', '10s', '20s']:
+    DATASETS[time] = (lambda kwargs, split=time: LightingWrapper(split, **kwargs))
 
 class TrackDatasetFactory:
     """A central class to manage the individual dataset loaders.

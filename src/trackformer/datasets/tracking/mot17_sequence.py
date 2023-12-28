@@ -25,8 +25,7 @@ class MOT17Sequence(Dataset):
     if more have to be handled one should inherit from this class.
     """
     data_folder = 'MOT17'
-
-    def __init__(self, root_dir: str = 'data', seq_name: Optional[str] = None,
+    def __init__(self, root_dir: str = 'data', seq_name: Optional[str] = None, split_folder: str = None,
                  dets: str = '', vis_threshold: float = 0.0, img_transform: Namespace = None) -> None:
         """
         Args:
@@ -40,11 +39,11 @@ class MOT17Sequence(Dataset):
         self._dets = dets
         self._vis_threshold = vis_threshold
 
-        self._data_dir = osp.join(root_dir, self.data_folder)
+        self._data_dir = osp.join(root_dir, self.data_folder) if split_folder is None else os.path.join(root_dir, self.data_folder, split_folder)
 
-        self._train_folders = os.listdir(os.path.join(self._data_dir, 'train'))
-        self._test_folders = os.listdir(os.path.join(self._data_dir, 'test'))
-
+        self._train_folders = os.listdir(os.path.join(self._data_dir, 'train')) if os.path.exists(os.path.join(self._data_dir, 'train')) else os.listdir(self._data_dir)
+        self._test_folders = os.listdir(os.path.join(self._data_dir, 'test')) if os.path.exists(os.path.join(self._data_dir, 'test')) else os.listdir(self._data_dir)
+        
         self.transforms = Compose(make_coco_transforms('val', img_transform, overflow_boxes=True))
 
         self.data = []
@@ -104,12 +103,14 @@ class MOT17Sequence(Dataset):
         img_dir = osp.join(
             self.get_seq_path(),
             self.config['Sequence']['imDir'])
+            
+        img_ext = self.config['Sequence']['imExt']
 
         boxes, visibility = self.get_track_boxes_and_visbility()
 
         total = [
             {'gt': boxes[i],
-             'im_path': osp.join(img_dir, f"{i:06d}.jpg"),
+             'im_path': osp.join(img_dir, f"{i:06d}{img_ext}"),
              'vis': visibility[i],
              'dets': dets[i]}
             for i in range(1, self.seq_length + 1)]
@@ -132,22 +133,15 @@ class MOT17Sequence(Dataset):
         with open(gt_file, "r") as inf:
             reader = csv.reader(inf, delimiter=',')
             for row in reader:
-                # class person, certainity 1
-                if int(row[6]) == 1 and int(row[7]) == 1 and float(row[8]) >= self._vis_threshold:
-                    # Make pixel indexes 0-based, should already be 0-based (or not)
-                    x1 = int(row[2]) - 1
-                    y1 = int(row[3]) - 1
-                    # This -1 accounts for the width (width of 1 x1=x2)
-                    x2 = x1 + int(row[4]) - 1
-                    y2 = y1 + int(row[5]) - 1
-                    bbox = np.array([x1, y1, x2, y2], dtype=np.float32)
-
-                    frame_id = int(row[0])
-                    track_id = int(row[1])
-
-                    boxes[frame_id][track_id] = bbox
-                    visibility[frame_id][track_id] = float(row[8])
-
+                x1 = int(row[2]) - 1
+                y1 = int(row[3]) - 1
+                x2 = x1 + int(row[4]) - 1
+                y2 = y1 + int(row[5]) - 1
+                bbox = np.array([x1, y1, x2, y2], dtype=np.float32)
+                frame_id = int(row[0])
+                track_id = int(row[1])
+                boxes[frame_id][track_id] = bbox
+                visibility[frame_id][track_id] = float(row[8])
         return boxes, visibility
 
     def get_seq_path(self) -> str:
@@ -156,10 +150,12 @@ class MOT17Sequence(Dataset):
         if self._dets is not None:
             full_seq_name = f"{self._seq_name}-{self._dets}"
 
-        if full_seq_name in self._train_folders:
+        if full_seq_name in self._train_folders and os.path.exists(os.path.join(self._data_dir, 'train')):
             return osp.join(self._data_dir, 'train', full_seq_name)
-        else:
+        elif full_seq_name in self._test_folders and os.path.exists(os.path.join(self._data_dir, 'test')):
             return osp.join(self._data_dir, 'test', full_seq_name)
+        else:
+            return osp.join(self._data_dir, full_seq_name)
 
     def get_config_file_path(self) -> str:
         """ Return config file of sequence. """
@@ -219,7 +215,7 @@ class MOT17Sequence(Dataset):
         # format_str = "{}, -1, {}, {}, {}, {}, {}, -1, -1, -1"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-
+            
         result_file_path = osp.join(output_dir, self.results_file_name)
 
         with open(result_file_path, "w") as r_file:
