@@ -22,6 +22,8 @@ def build_model(args):
         # num_classes = 91
         num_classes = 20
         # num_classes = 1
+    elif args.dataset == 'base':
+        num_classes = 2
     else:
         raise NotImplementedError
 
