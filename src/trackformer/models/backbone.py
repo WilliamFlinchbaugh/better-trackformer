@@ -60,6 +60,7 @@ class BackboneBase(nn.Module):
                  return_interm_layers: bool):
         super().__init__()
         self.use_fpn = True
+        self.use_panet = True
         
         for name, parameter in backbone.named_parameters():
             if (not train_backbone
@@ -77,9 +78,16 @@ class BackboneBase(nn.Module):
                 return_layers={f'layer{k}': str(v) for v, k in enumerate([1, 2, 3, 4])})
         
             self.fpn = FeaturePyramidNetwork(
-                self.channels, out_channels=self.num_channels[0],
+                self.channels, 
+                out_channels=256,
                 extra_blocks=LastLevelMaxPool())
             
+            if self.use_panet:
+                self.bottom_up = FeaturePyramidNetwork(
+                    self.num_channels, 
+                    out_channels=256,
+                    extra_blocks=LastLevelMaxPool())
+
         else:
             if return_interm_layers:
                 return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
@@ -93,10 +101,14 @@ class BackboneBase(nn.Module):
             self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
 
     def forward(self, tensor_list: NestedTensor):
-        print(x.size for x in tensor_list.tensors)
         xs = self.body(tensor_list.tensors)
+        
         if self.use_fpn:
-            xs = self.top_down(xs)
+            xs = self.fpn(xs)
+            
+            if self.use_panet:
+                xs = self.bottom_up(xs)
+                
         out: Dict[str, NestedTensor] = {}
         for name, x in xs.items():
             m = tensor_list.mask
