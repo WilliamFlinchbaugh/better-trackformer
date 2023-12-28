@@ -65,6 +65,8 @@ def rand_cmap(nlabels, type='bright', first_color_black=True, last_color_black=F
 
     import numpy as np
     from matplotlib.colors import LinearSegmentedColormap
+    
+    nlabels = max(nlabels, 1)
 
 
     if type not in ('bright', 'soft'):
@@ -90,7 +92,6 @@ def rand_cmap(nlabels, type='bright', first_color_black=True, last_color_black=F
 
         if last_color_black:
             randRGBcolors[-1] = [0, 0, 0]
-
         random_colormap = LinearSegmentedColormap.from_list('new_map', randRGBcolors, N=nlabels)
 
     # Generate soft pastel colors, by limiting the RGB spectrum
@@ -140,6 +141,7 @@ def plot_sequence(tracks, data_loader, output_dir, write_images, generate_attent
     # styles = defaultdict(lambda: next(loop_cy_iter))
 
     # cmap = plt.cm.get_cmap('hsv', )
+    
     mx = 0
     for track_id, track_data in tracks.items():
         mx = max(mx, track_id)
@@ -194,7 +196,7 @@ def plot_sequence(tracks, data_loader, output_dir, write_images, generate_attent
                             color=cmap(track_id),
                         ))
 
-                    annotate_color = cmap(track_id)
+                    annotate_color = 'red'
 
                 if write_images == 'debug':
                     ax.annotate(
