@@ -13,6 +13,7 @@ from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork
 from torchvision.models.detection.backbone_utils import LastLevelMaxPool
 from ..util.misc import NestedTensor, is_main_process
 from .position_encoding import build_position_encoding
+from .fpn import FPN
 
 
 class FrozenBatchNorm2d(torch.nn.Module):
@@ -73,26 +74,19 @@ class BackboneBase(nn.Module):
         if self.use_fpn:
             self.strides = [4, 8, 16, 32]
             self.channels = [256, 512, 1024, 2048]
-            self.num_channels = [256, 256, 256, 256]
+            self.num_channels = [256, 256, 256, 256] # so that detr gets right dims
             
             self.body = IntermediateLayerGetter(backbone, 
                 return_layers={f'layer{k}': str(v) for v, k in enumerate([1, 2, 3, 4])})
-        
-            self.fpn = FeaturePyramidNetwork(
-                self.channels, 
-                out_channels=256,
-                extra_blocks=LastLevelMaxPool())
+
+            fpn_lateral_dims = list(reversed(self.channels)) # fpn expects dims reversed
+            fpn_dim = self.num_channels[0]
             
-            if self.use_panet:
-                self.bottom_up = FeaturePyramidNetwork(
-                    self.num_channels, 
-                    out_channels=256,
-                    extra_blocks=LastLevelMaxPool())
+            self.fpn = FPN(fpn_lateral_dims, fpn_dim, use_panet=self.use_panet)
 
         else:
             if return_interm_layers:
                 return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
-                # return_layers = {"layer2": "0", "layer3": "1", "layer4": "2"}
                 self.strides = [4, 8, 16, 32]
                 self.num_channels = [256, 512, 1024, 2048]
             else:
@@ -106,9 +100,6 @@ class BackboneBase(nn.Module):
         
         if self.use_fpn:
             xs = self.fpn(xs)
-            
-            if self.use_panet:
-                xs = self.bottom_up(xs)
                 
         out: Dict[str, NestedTensor] = {}
         for name, x in xs.items():
